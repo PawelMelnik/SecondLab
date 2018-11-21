@@ -1,5 +1,7 @@
+import java.io.IOException;
+
 public class Main {
-    public static void main(String[] args) {
+    public static void main(String[] args) throws IOException {
         if (args.length == 1)
         {
             Manager manager = new Manager(args[0]);
@@ -10,7 +12,5 @@ public class Main {
         }
         Log.close();
         System.exit(0);
-
-
     }
 }
