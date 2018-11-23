@@ -1,7 +1,7 @@
 import java.io.IOException;
 import java.util.Map;
 
-public class InterpreterRelations extends Interpreter{
+public class InterpreterRelations {
     protected static final String COLON = ":";
     public static void Interpreted(String config, Map<String, String> resultMap) throws IOException
     {

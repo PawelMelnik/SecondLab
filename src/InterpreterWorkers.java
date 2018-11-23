@@ -1,9 +1,8 @@
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-public class InterpreterWorkers extends Interpreter{
+public class InterpreterWorkers {
     protected static final String COLON = ":";
     public static final Map<String, Enum> workers_lexemeMap;
     public enum WorkersTypes {WORKER_FIRST, WORKER_LAST, WORKER}
@@ -35,16 +34,10 @@ public class InterpreterWorkers extends Interpreter{
             resultMap.put(ParamPair[1], properties);
         }
 
-        if (!resultMap.containsKey(WorkersTypes.WORKER_FIRST))/////////
+        if (!isAllWorkers(resultMap))
         {
-            Log.report("Input file is not found");
-            throw new FileNotFoundException();
-        }
-
-        if (!resultMap.containsKey(WorkersTypes.WORKER_LAST))///////////
-        {
-            Log.report("Workers file is not found");
-            throw new FileNotFoundException();
+            Log.report("Incorrect types of workers");
+            throw new IOException();
         }
 
         reader.CloseStream();
@@ -75,5 +68,38 @@ public class InterpreterWorkers extends Interpreter{
             return false;
         }
         return true;
+    }
+
+    public static boolean isAllWorkers(Map<String, WorkerProperties> resultMap)
+    {
+        if (isContainsFirst(resultMap) && isContainsLast(resultMap))
+        {
+            return  true;
+        }
+        return false;
+    }
+
+    public static boolean isContainsFirst(Map<String, WorkerProperties> resultMap)
+    {
+        for (String worker_key: resultMap.keySet())
+        {
+            if(resultMap.get(worker_key).type_of_worker.equals("WORKER_FIRST"))
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public static boolean isContainsLast(Map<String, WorkerProperties> resultMap)
+    {
+        for (String worker_key: resultMap.keySet())
+        {
+            if(resultMap.get(worker_key).type_of_worker.equals("WORKER_LAST"))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 }
