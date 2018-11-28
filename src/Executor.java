@@ -1,9 +1,7 @@
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 
-interface Executor {
-    void SetInput (FileInputStream input);
-    void SetOutput (FileOutputStream output);
+public interface Executor {
+    void SetInput (String input);
+    void SetOutput (String output);
 
     void SetConsumer(Executor ex);
     void Run();
