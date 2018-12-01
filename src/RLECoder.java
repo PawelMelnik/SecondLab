@@ -4,9 +4,16 @@ public class RLECoder implements Executor {
 
     private String input = null;
     private String output = null;
-    Executor Consumer;
+    private Executor Consumer;
     public byte[] block = null;
-    int CODE_MODE;
+    private int CODE_MODE;
+
+    /*RLECoder(String input, String output, int CODE_MODE)
+    {
+        this.input = input;
+        this.output = output;
+        this.CODE_MODE = CODE_MODE;
+    }*/
 
     public void SetInput (String input)
     {
@@ -17,62 +24,76 @@ public class RLECoder implements Executor {
         this.output = output;
     }
 
+    public void SetCodeMode(int CODE_MODE)
+    {
+        this.CODE_MODE = CODE_MODE;
+    }
+
     public void SetConsumer(Executor ex)
     {
         this.Consumer = ex;
     }
-    public void Run()
+    public int Run()
     {
-        try {
-            if (this.CODE_MODE == 0)
-            {
-                RunEncode();
-            }
-            else
-            {
-                RunDecode();
-            }
+        int err;
+        if (this.CODE_MODE == 0)
+        {
+            err = RunEncode();
         }
-        catch (IOException e)
+        else
+        {
+            err = RunDecode();
+        }
+
+        if (err != 0)
         {
             Log.report("Can't run");//////////
+            return -1;
         }
+        return Consumer.Run();
     }
     public void Put(Object obj)
     {
         this.block = (byte [])obj;
     }
 
-    private void RunEncode() throws IOException
+    private int RunEncode()
     {
         if (input != null && block != null)
         {
             Log.report("Incorrect first worker");
-            throw new IOException();
+            return -1;
         }
 
         if (input != null)
         {
-            ReadToArray();
+            if (ReadToArray() == -1)
+            {
+                return -1;
+            }
+        }
+        else if (block == null)
+        {
+            return  -1;
         }
 
         int block_index = 0;
         int out_arr_index = 0;
         byte count = 1;
         byte i = block[block_index];
-        byte[] out_array = new byte[8];
+        int size = block.length;
+        byte[] out_array = new byte[2 * size];
 
-        while (i != -1 && block_index < 4)
+        while (i != -1 && block_index < size)
         {
             byte j = block[block_index + 1];
 
-            while (j == i && block_index < 4)
+            while (j == i && block_index < size)
             {
                 count++;
                 block_index++;
                 j = block[block_index];
             }
-
 
             out_array[out_arr_index] = count;
             out_arr_index++;
@@ -82,40 +103,89 @@ public class RLECoder implements Executor {
             count = 1;
 
         }
-    }
 
-
-    private static void RunDecode(String inputFile, String outputFile, int min_length) throws IOException
-    {
-        try (FileInputStream readerInput = new FileInputStream(inputFile);
-             FileOutputStream writerOutput = new FileOutputStream(outputFile))
+        if (out_arr_index < 2 * size)
         {
-            if(min_length <= 0) {
-                throw new IOException("Wrong portion length. Expected: >=0. Found:" + min_length);
-            }
+            out_array[out_arr_index] = -1;
+        }
 
-            byte k = 0;
-            while((k = (byte)readerInput.read()) != -1)
+        if (output != null)
+        {
+            if (PrintArray(out_array) == -1)
             {
-                byte j = (byte)readerInput.read();
-                while( k > 0)
-                {
-                    writerOutput.write((char)j);
-                    writerOutput.flush();
-                    k--;
-                }
+                return -1;
             }
         }
-
-        catch (IOException e)
+        else
         {
-            Log.report("Can't decode file");
-            throw new IOException();
+            if (Consumer == null)
+            {
+                return -1;
+            }
+            Consumer.Put(out_array);
         }
-
+        return 0;
     }
 
-    private void ReadToArray() throws IOException
+
+    private int RunDecode()
+    {
+        if (input != null && block != null)
+        {
+            Log.report("Incorrect first worker");
+            return -1;
+        }
+
+        if (input != null)
+        {
+            if (ReadToArray() == -1)
+            {
+                return -1;
+            }
+        }
+        else if (block == null)
+        {
+            return  -1;
+        }
+
+        int block_index = 0;
+        int out_arr_index = 0;
+        byte count = 1;
+        byte i = block[block_index];
+        int size = GetNewArraySize();
+        byte[] out_array = new byte[size];
+
+        while(i != -1 && block_index < block.length)
+        {
+            byte j = block[block_index + 1];
+            while( i > 0)
+            {
+                out_array[out_arr_index] = j;
+                out_arr_index++;
+                i--;
+            }
+            block_index += 2;
+        }
+
+        if (output != null)
+        {
+            if (PrintArray(out_array) == -1)
+            {
+                return -1;
+            }
+        }
+        else
+        {
+            if (Consumer == null)
+            {
+                return -1;
+            }
+            Consumer.Put(out_array);
+        }
+        return 0;
+    }
+
+    private int ReadToArray()
     {
         byte[] array = new byte[4];
         try (FileInputStream readerInput = new FileInputStream(input))
@@ -134,11 +204,43 @@ public class RLECoder implements Executor {
         catch (IOException e)
         {
             Log.report("Can't encode file");
-            throw new IOException();
+            return -1;
         }
         block = array;
+        return 0;
     }
 
+    private int GetNewArraySize()
+    {
+        int i;
+        int size = 0;
+        for (i = 0; i < block.length && block[i] != -1; i += 2)
+        {
+            size += (int)block[i];
+        }
+        return size;
+    }
+
+    int PrintArray(byte[] out_arr)
+    {
+        try (FileOutputStream writerOutput = new FileOutputStream(output))
+        {
+            int i = 0;
+            while( out_arr[i] != -1 && i < out_arr.length)
+            {
+                writerOutput.write((char)out_arr[i]);
+                writerOutput.flush();
+                i++;
+            }
+        }
+
+        catch (IOException e)
+        {
+            Log.report("Can't write to output file");
+            return -1;
+        }
+        return 0;
+    }
     /*DataInputStream ChooseInput() throws IOException
     {
         DataInputStream inp;

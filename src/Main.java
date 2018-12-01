@@ -5,6 +5,7 @@ public class Main {
         if (args.length == 1)
         {
             Manager manager = new Manager(args[0]);
+            manager.Run();
         }
         else
         {
